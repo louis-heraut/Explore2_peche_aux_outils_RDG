@@ -3,21 +3,27 @@
 #
 # *1   INRAE, UR RiverLy, Villeurbanne, France
 #
-# This file is part of Explore2 R later toolbox.
+# This file is part of Explore2_peche_aux_outils_RDG.
 #
-# Explore2 R later toolbox is free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# Explore2_peche_aux_outils_RDG is free software: you can redistribute
+# it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
-# Explore2 R later toolbox is distributed in the hope that it will be
-# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# Explore2_peche_aux_outils_RDG is distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Explore2 R later toolbox.
+# along with Explore2_peche_aux_outils_RDG.
 # If not, see <https://www.gnu.org/licenses/>.
+
+
+## 0. REQUIREMENT ____________________________________________________
+if(!require(arrow)) install.packages("arrow")
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(purrr)) install.packages("purrr")
 
 
 ## 1. TÉLÉCHARGER UN JEU DE DONNÉES __________________________________
@@ -50,7 +56,10 @@ Files = basename(Paths)
 # L'objectif est de retirer les informations d'intérêt des noms de
 # fichier en les découpant selon le caractères de séparation "_" 
 
-Files_info = strsplit(Files, "_")
+# Séparation des informations
+Files_info = strsplit(gsub(".parquet", "", Files), "_")
+
+# Récupération des informations
 Indicators = sapply(Files_info, "[", 1)
 Samplings = sapply(Files_info, "[", 2)
 EXP = sapply(Files_info, "[", 3)
@@ -59,49 +68,52 @@ RCM = sapply(Files_info, "[", 5)
 BC = sapply(Files_info, "[", 6)
 HM = sapply(Files_info, "[", 7)
 
+# Sélection de la ou les chaînes de simulation voulues
 indicator = "VCN10"
-sampling = "yr"
-exp = "rcp85"
-gcm = "HadGEM2"
-rcm = "CCLM4"
+sampling = "summer"
+exp = "historical-rcp85"
+gcm = "HadGEM2-ES"
+rcm = c("ALADIN63", "CCLM4-8-17")
 bc = "ADAMONT"
-hm = "J2000"
+hm = "SMASH"
 
-path = Paths[Indicators == indicator &
-             Samplings == sampling &
-             EXP == exp &
-             GCM == gcm &
-             RCM == rcm &
-             BC == bc &
-             HM == hm]
-
-
-
+# Récupération des chemins des données
+paths_selection =
+    Paths[Indicators %in% indicator &
+          Samplings %in% sampling &
+          EXP %in% exp &
+          GCM %in% gcm &
+          RCM %in% rcm &
+          BC %in% bc &
+          HM %in% hm]
 
 ### 3.2. Expressions régulières ______________________________________
-# Les expressions régulières (regex)sont des motifs textuels servant à
-# rechercher, valider ou manipuler des chaînes de caractères selon des
-# règles précises. Les mots-clés utilisés peuvent être tonqué tant que
-# l'on s'assure de notre séléction finale.
-#
+# Les expressions régulières (regex) sont des motifs textuels servant
+# à rechercher, valider ou manipuler des chaînes de caractères selon
+# des règles précises. Les mots-clés utilisés peuvent être tonqué
+# tant que l'on s'assure de notre séléction finale.
+
 # Ici le "^" est utilisé pour indiquer le début du nom du fichier et
 # pour éviter de sélection "tVCN10_summer" qui serait aussi
-# sélectionné avec "VCN10_summer". Voilà un des nombreux exemples de
-# règles utilisés dans les expressions régulières. 
-
+# sélectionné avec "VCN10_summer". L'astérix "*" fait office de jocker
+# et permet de sélectionner toutes les options. Voilà deux des
+# nombreux exemples de règles utilisés dans les expressions
+# régulières.
 variable = "^VCN10_summer" 
 exp = "rcp85"
-gcm = "HadGEM2"
-rcm = "CCLM4"
+gcm = "*"
+rcm = "*"
 bc = "ADAMONT"
-hm = "J2000"
+hm = "SMASH"
 
-path = Paths[grepl(variable, Files) &
-             grepl(exp, Files) &
-             grepl(gcm, Files) &
-             grepl(rcm, Files) &
-             grepl(bc, Files) &
-             grepl(hm, Files)]
+# Récupération des chemins des données
+paths_all_rcp85 =
+    Paths[grepl(variable, Files) &
+          grepl(exp, Files) &
+          grepl(gcm, Files) &
+          grepl(rcm, Files) &
+          grepl(bc, Files) &
+          grepl(hm, Files)]
 
 # Cette démarche peut paraître compliquées au premier abord mais
 # permet une plus grande flexibilité et rapidité d'utilisation.
@@ -109,3 +121,14 @@ path = Paths[grepl(variable, Files) &
 
 
 ## 4. LECTURE ________________________________________________________
+### 4.1. Lecture d'un fichier unique _________________________________
+# Sélection d'une chaîne
+path = paths_selection[2]
+# Lecture du fichier parquet
+data_selection = arrow::read_parquet(path)
+
+### 4.2. Lecture multiple ____________________________________________
+# Lecture d'un groupe de fichiers parquet en liste
+data_all_rcp85_list = lapply(paths_all_rcp85, arrow::read_parquet)
+# Concaténation des données
+data_all_rcp85 = purrr::reduce(data_all_rcp85_list, dplyr::bind_rows)

@@ -6,9 +6,9 @@
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md) 
 <!-- badges: end -->
 
-**Explore2 pêche aux outils pour RDG** est un ensemble de codes qui permettent de prendre en main les données issues du projet [Explore2](https://professionnels.ofb.fr/fr/node/1244) disponible sur le dataverse [Recheche Data Gouv Explore2](https://drias-eau.fr/).
+**Explore2 pêche aux outils pour RDG** est un ensemble de codes qui permettent de prendre en main les données issues du projet [Explore2](https://professionnels.ofb.fr/fr/node/1244) disponible sur le dataverse [Recheche Data Gouv Explore2](https://entrepot.recherche.data.gouv.fr/dataverse/explore2).
 
-Les rapports et messages du projet Explore2 sont disponibles sur l'entrepôt [Recherche Data Gouv](https://entrepot.recherche.data.gouv.fr/dataverse/explore2).
+Les rapports et messages du projet Explore2 sont disponibles sur l'entrepôt [Recherche Data Gouv](https://entrepot.recherche.data.gouv.fr/dataverse/explore2-rapports_techniques).
 
 Ce projet a été rendu possible dans le cadre d'un développement réalisé par l'Institut National de Recherche pour l’Agriculture, l’Alimentation et l’Environnement, [INRAE](https://agriculture.gouv.fr/inrae-linstitut-national-de-recherche-pour-lagriculture-lalimentation-et-lenvironnement).
 
@@ -19,6 +19,10 @@ Soit en clonant le répertoire git :
 git clone https://github.com/louis-heraut/Explore2_peche_aux_outils_RDG.git
 ```
 Soit en téléchargeant l'[archive zip](https://github.com/louis-heraut/Explore2_peche_aux_outils_RDG/archive/refs/heads/main.zip) puis en la décompressant.
+
+
+## ✨ Participation ✨
+Si vous développez du code pour accéder ou traiter les données Explore2 dataverse qui pourrait être utile à la communauté et que vous aimeriez partager, n'hésitez pas à le soumettre à ce dépôt ! 
 
 
 ## FAQ

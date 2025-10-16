@@ -21,9 +21,15 @@
 
 
 ## 0. REQUIREMENT ____________________________________________________
-if(!require(arrow)) install.packages("arrow")
-if(!require(dplyr)) install.packages("dplyr")
-if(!require(purrr)) install.packages("purrr")
+# Installation des dépendances si nécessaire
+# (à exécuter manuellement dans un terminal si besoin)
+# pip install pyarrow pandas
+import glob
+import os
+import numpy as np
+import re
+import pandas as pd
+import pyarrow.parquet as pq
 
 
 ## 1. TÉLÉCHARGER UN JEU DE DONNÉES __________________________________
@@ -32,7 +38,7 @@ if(!require(purrr)) install.packages("purrr")
 # https://doi.org/10.57745/RTHKI2
 
 
-## 2. CHEMIN D'ACCÈS _________________________________________________ 
+## 2. CHEMIN D'ACCÈS _________________________________________________
 # Chemin d'accès de votre dossier de données où vous stockez le
 # dossier téléchargé depuis l'entrepôt Recherche Data Gouv
 data_dirpath = "/home/lheraut/Téléchargements/dataverse_files"
@@ -42,49 +48,51 @@ data_dirpath = "/home/lheraut/Téléchargements/dataverse_files"
 indicators_dir = "series_annuelles"
 
 # Liste de l'ensemble des chemins d'accès aux fichiers parquet
-Paths = list.files(file.path(data_dirpath, indicators_dir),
-                   pattern=".parquet", full.names=TRUE,
-                   recursive=TRUE)
+Paths = glob.glob(os.path.join(data_dirpath,
+                               indicators_dir,
+                               "**", "*.parquet"),
+                  recursive=True)
 
 # Listes des noms de fichier
-Files = basename(Paths)
+Files = [os.path.basename(p) for p in Paths]
 
 
 ## 3. FILTRAGE _______________________________________________________
 ### 3.1. Matche par découpe des noms de fichiers _____________________
 # L'objectif est de retirer les informations d'intérêt des noms de
-# fichier en les découpant selon le caractères de séparation "_" 
+# fichier en les découpant selon le caractères de séparation "_"
 
 # Séparation des informations
-Files_info = strsplit(gsub(".parquet", "", Files), "_")
+Files_info = [os.path.splitext(f)[0].split("_") for f in Files]
 
 # Récupération des informations
-Indicators = sapply(Files_info, "[", 1)
-Samplings = sapply(Files_info, "[", 2)
-EXP = sapply(Files_info, "[", 3)
-GCM = sapply(Files_info, "[", 4)
-RCM = sapply(Files_info, "[", 5)
-BC = sapply(Files_info, "[", 6)
-HM = sapply(Files_info, "[", 7)
+Indicators = np.array([info[0] for info in Files_info])
+Samplings = np.array([info[1] for info in Files_info])
+EXP = np.array([info[2] for info in Files_info])
+GCM = np.array([info[3] for info in Files_info])
+RCM = np.array([info[4] for info in Files_info])
+BC = np.array([info[5] for info in Files_info])
+HM = np.array([info[6] for info in Files_info])
 
 # Sélection de la ou les chaînes de simulation voulues
 indicator = "VCN10"
 sampling = "summer"
 exp = "historical-rcp85"
 gcm = "HadGEM2-ES"
-rcm = c("ALADIN63", "CCLM4-8-17")
+rcm = ["ALADIN63", "CCLM4-8-17"]
 bc = "ADAMONT"
 hm = "SMASH"
 
-# Récupération des chemins des données
-paths_selection =
-    Paths[Indicators %in% indicator &
-          Samplings %in% sampling &
-          EXP %in% exp &
-          GCM %in% gcm &
-          RCM %in% rcm &
-          BC %in% bc &
-          HM %in% hm]
+# Récupération des chemins des données avec NumPy
+paths_selection = np.array(Paths)[
+    (np.isin(Indicators, indicator) &
+     np.isin(Samplings, sampling) &
+     np.isin(EXP, exp) &
+     np.isin(GCM, gcm) &
+     np.isin(RCM, rcm) &
+     np.isin(BC, bc) &
+     np.isin(HM, hm))
+]
 
 ### 3.2. Expressions régulières ______________________________________
 # Les expressions régulières (regex) sont des motifs textuels servant
@@ -97,36 +105,32 @@ paths_selection =
 # sélectionné avec "VCN10_summer". Le ".*" fait office de jocker et
 # permet de sélectionner toutes les options. Voilà deux des nombreux
 # exemples de règles utilisés dans les expressions régulières.
-variable = "^VCN10_summer" 
+variable = "^VCN10_summer"
 exp = "rcp85"
 gcm = ".*"
 rcm = ".*"
 bc = "ADAMONT"
 hm = "SMASH"
 
-# Récupération des chemins des données
-paths_all_rcp85 =
-    Paths[grepl(variable, Files) &
-          grepl(exp, Files) &
-          grepl(gcm, Files) &
-          grepl(rcm, Files) &
-          grepl(bc, Files) &
-          grepl(hm, Files)]
-
-# Cette démarche peut paraître compliquées au premier abord mais
-# permet une plus grande flexibilité et rapidité d'utilisation.
-## /!\ Toujours vérifier la sélection faite ##
+# Récupération des chemins des données sans NumPy
+paths_all_rcp85 = [
+    path for i, path in enumerate(Paths)
+    if re.search(variable, Files[i])
+    and re.search(exp, Files[i])
+    and re.search(gcm, Files[i])
+    and re.search(rcm, Files[i])
+    and re.search(bc, Files[i])
+    and re.search(hm, Files[i])
+]
 
 
 ## 4. LECTURE ________________________________________________________
 ### 4.1. Lecture d'un fichier unique _________________________________
 # Sélection d'une chaîne
-path = paths_selection[2]
-# Lecture du fichier parquet
-data_selection = arrow::read_parquet(path)
+path = paths_selection[1]
+data_selection = pq.read_table(path).to_pandas()
 
 ### 4.2. Lecture multiple ____________________________________________
-# Lecture d'un groupe de fichiers parquet en liste
-data_all_rcp85_list = lapply(paths_all_rcp85, arrow::read_parquet)
-# Concaténation des données
-data_all_rcp85 = purrr::reduce(data_all_rcp85_list, dplyr::bind_rows)
+data_all_rcp85_list = [pq.read_table(p).to_pandas()
+                       for p in paths_all_rcp85]
+data_all_rcp85 = pd.concat(data_all_rcp85_list)

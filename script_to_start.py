@@ -41,8 +41,7 @@ import pyarrow.parquet as pq
 ## 2. CHEMIN D'ACCÈS _________________________________________________
 # Chemin d'accès de votre dossier de données où vous stockez le
 # dossier téléchargé depuis l'entrepôt Recherche Data Gouv
-data_dirpath = "/home/lheraut/Téléchargements/dataverse_files"
-# "path/to/data/directory"
+data_dirpath = "path/to/dataverse_files"
 
 # Nom du dossier de données dézipé
 indicators_dir = "series_annuelles"

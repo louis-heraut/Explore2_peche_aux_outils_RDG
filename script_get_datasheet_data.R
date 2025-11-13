@@ -31,18 +31,19 @@ if(!require(RColorBrewer)) install.packages("RColorBrewer")
 # Télécharger les données d'indicateurs hydrologiques associées aux
 # fiches de synthèse TRACC : https://doi.org/10.57745/W0KO1G
 
+# Télécharger les métadonnées de stations associées :
+# https://doi.org/10.57745/UTKWR5
+
 
 ## 2. CHEMIN D'ACCÈS _________________________________________________ 
 # Chemin d'accès de votre dossier de données où vous stockez le
 # dossier téléchargé depuis l'entrepôt Recherche Data Gouv
 data_dirpath =
-    # "path/to/dataverse_files"
-    "/home/lheraut/Téléchargements/dataverse_files"
+    "path/to/dataverse_files"
 
 # Chemin vers le fichier de métadonnées spatiales
 Stations_path =
-    # "path/to/metadata/stations_Explore2.csv"
-    "/media/lheraut/Explore2/metadata/stations_Explore2.csv"
+    "path/to/metadata/stations_Explore2.csv"
 
 # Lecture du fichier de métadonnées
 Stations = dplyr::tibble(read.csv(Stations_path))
@@ -74,63 +75,35 @@ data = dplyr::filter(data_all,
                      RWL==rwl & SH==sh)
 
 # Calcul
-data_one = dplyr::summarise(dplyr::group_by(data, code),
-                            !!variable:=mean(get(variable),
-                                             na.rm=TRUE))
-
-
-
-data_each_step =
+data_stat =
     dplyr::summarise(dplyr::group_by(data, code, GCM, RCM),
                      !!variable:=mean(get(variable),
                                       na.rm=TRUE),
-                     n=dplyr::n(),
                      .groups="drop")
-data_each_step = 
-    dplyr::summarise(dplyr::group_by(data_each_step, code, GCM),
+data_stat = 
+    dplyr::summarise(dplyr::group_by(data_stat, code, GCM),
                      !!variable:=mean(get(variable),
                                       na.rm=TRUE),
-                     n=dplyr::n(),
                      .groups="drop")
-data_each_step = 
-    dplyr::summarise(dplyr::group_by(data_each_step, code),
+data_stat = 
+    dplyr::summarise(dplyr::group_by(data_stat, code),
                      !!variable:=mean(get(variable),
                                       na.rm=TRUE),
-                     n=dplyr::n(),
                      .groups="drop")
-
-
-
-data_group_step = 
-    dplyr::summarise(dplyr::group_by(data, code, GCM, RCM),
-                     !!variable:=mean(get(variable),
-                                      na.rm=TRUE),
-                     n=dplyr::n(),
-                     .groups="drop")
-data_group_step = 
-    dplyr::summarise(dplyr::group_by(data_group_step, code),
-                     !!variable:=mean(get(variable),
-                                      na.rm=TRUE),
-                     n=dplyr::n(),
-                     .groups="drop")
-
-
-stop()
-
-
 
 
 # Ajout des métadonnées
-data = dplyr::left_join(data,
-                        dplyr::select(Stations,
-                                      code, XL93_m, YL93_m),
-                        by="code")
+data_stat = dplyr::left_join(data_stat,
+                             dplyr::select(Stations,
+                                           code, XL93_m, YL93_m),
+                             by="code")
 
 # Graphique sommaire
 breaks = c(-50, -37.5, -25, -12.5, 0, 12.5, 25, 37.5, 50)
 labels = c("< -50", "-37.5", "-25", "-12.5", "0", "12.5", "25", "37.5", "> 50")
 plot =
-    ggplot(data, aes(x=XL93_m, y =YL93_m, color=get(variable))) +
+    ggplot(data_stat,
+           aes(x=XL93_m, y =YL93_m, color=get(variable))) +
     coord_fixed() +
     geom_point(size=3) +
     scale_color_stepsn(colors=RColorBrewer::brewer.pal(10, "BrBG"),
@@ -144,14 +117,38 @@ plot =
 plot
 
 
+### 3.2. Tableau (f) : Changements relatifs projetés _________________
+# Variable
+variable = "delta-VCN10-5_summer"
 
+# Nom du fichier 
+file = "delta-VCN10-5_summer_RWL-all_historical-rcp85_all_all_ADAMONT_all_ref-19910101-20201231_filtered.parquet"
 
+# Création du chemin vers les données 
+path = file.path(data_dirpath, file)
 
+# Lecture du fichier parquet
+data_all = arrow::read_parquet(path)
 
-### Figure (b) _______________________________________________________
+# Filtrage
+data = dplyr::filter(data_all,
+                     RWL==rwl & SH==sh)
 
+# Calcul de la médiane spatiale sur l'ensemble du secteur pour chaque
+# chaîne de simulation
+data_secteur =
+    dplyr::summarise(dplyr::group_by(data,
+                                     GCM, RCM, HM),
+                     !!variable:=median(get(variable),
+                                        na.rm=TRUE),
+                     .groups="drop")
 
-
-
-
-
+# Calcul des statistiques d'ensemble
+data_stat =
+    dplyr::summarise(data_secteur,
+                     !!paste0("min_", variable):=
+                         min(get(variable), na.rm=TRUE),
+                     !!paste0("med_", variable):=
+                         median(get(variable), na.rm=TRUE),
+                     !!paste0("max_", variable):=
+                         max(get(variable), na.rm=TRUE))
